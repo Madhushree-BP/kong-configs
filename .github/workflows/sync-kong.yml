@@ -34,7 +34,7 @@ jobs:
           KONG_TOKEN: ${{ secrets.KONG_TOKEN }}
         run: |
           # ensure we have a clean copy
-          deck dump --all -o kong.yaml --kong-addr "${KONG_ADMIN_URL}" --headers "Kong-Admin-Token: ${KONG_TOKEN}"
+          deck dump -o kong.yaml --kong-addr "${KONG_ADMIN_URL}" --headers "Kong-Admin-Token: ${KONG_TOKEN}"
 
       - name: Show diff (optional)
         run: |
