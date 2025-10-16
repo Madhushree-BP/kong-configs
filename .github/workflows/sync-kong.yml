@@ -31,10 +31,10 @@ jobs:
       - name: Export Kong config
         env:
           KONG_ADMIN_URL: ${{ secrets.KONG_ADMIN_URL }}
-          KONG_TOKEN: ${{ secrets.KONG_TOKEN }}
+          KONG_TOKEN_NEW: ${{ secrets.KONG_TOKEN_NEW }}
         run: |
           # ensure we have a clean copy
-          deck dump -o kong.yaml --kong-addr "${KONG_ADMIN_URL}" --headers "Kong-Admin-Token: ${KONG_TOKEN}"
+          deck dump -o kong.yaml --kong-addr "${KONG_ADMIN_URL}" --headers "Kong-Admin-Token: ${KONG_TOKEN_NEW}"
 
       - name: Show diff (optional)
         run: |
