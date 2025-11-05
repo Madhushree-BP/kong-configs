@@ -70,11 +70,15 @@ jobs:
       - name: Show diff (optional)
         shell: powershell
         run: |
-          $diff = git --no-pager diff -- kong.yaml
+          Write-Host "Checking for config changes..."
+          $gitPath = "${env:ProgramFiles}\Git\bin"
+          if (Test-Path $gitPath) { $env:PATH += ";$gitPath" }
+
+          $diff = & git --no-pager diff -- kong.yaml 2>$null
           if ([string]::IsNullOrWhiteSpace($diff)) {
-            Write-Host "No diff found."
+            Write-Host "✅ No diff found."
           } else {
-            Write-Host "Differences found:"
+            Write-Host "🔍 Differences detected:"
             Write-Host $diff
           }
 
