@@ -1,19 +1,19 @@
-name: Sync Kong Config (Self-hosted)
+name: Sync Kong Config (Self-hosted Windows)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:     # allows manual trigger from Actions UI
   schedule:
     - cron: "30 18 * * *"   # runs daily at 00:00 IST (18:30 UTC previous day)
 
 permissions:
-  contents: write
+  contents: write   # allow pushing changes to the repo
 
 env:
-  main: kong-config
+  main: kong-config   # change to 'main' if you want to push to main branch
 
 jobs:
   sync:
-    runs-on: self-hosted
+    runs-on: self-hosted   # runs on your Windows self-hosted runner
 
     steps:
       - name: Checkout repo
@@ -27,8 +27,10 @@ jobs:
           Write-Host "Downloading decK for Windows..."
           Invoke-WebRequest -Uri "https://github.com/kong/deck/releases/download/v1.21.0/deck_1.21.0_windows_amd64.tar.gz" -OutFile "deck.tar.gz"
           tar -xzf deck.tar.gz
-          Move-Item -Path .\deck.exe -Destination "C:\deck.exe" -Force
-          & "C:\deck.exe" version
+          $deckPath = "$env:RUNNER_TEMP\deck.exe"
+          Move-Item -Path .\deck.exe -Destination $deckPath -Force
+          Write-Host "✅ decK installed to $deckPath"
+          & $deckPath version
 
       - name: Export Kong configuration
         shell: powershell
@@ -36,14 +38,39 @@ jobs:
           KONG_ADMIN_URL: ${{ secrets.KONG_ADMIN_URL }}
           KONG_TOKEN_NEW: ${{ secrets.KONG_TOKEN_NEW }}
         run: |
+          $deckPath = "$env:RUNNER_TEMP\deck.exe"
           Write-Host "Exporting Kong configuration from $env:KONG_ADMIN_URL"
-          & "C:\deck.exe" dump `
-            -o kong.yaml `
-            --kong-addr "$env:KONG_ADMIN_URL" `
-            --headers "Kong-Admin-Token: $env:KONG_TOKEN_NEW" `
-            --tls-skip-verify `
-            --timeout 60
-          Write-Host "✅ Export completed successfully."
+
+          $maxRetries = 3
+          for ($i = 1; $i -le $maxRetries; $i++) {
+            try {
+              & $deckPath dump `
+                -o kong.yaml `
+                --kong-addr "$env:KONG_ADMIN_URL" `
+                --headers "Kong-Admin-Token: $env:KONG_TOKEN_NEW" `
+                --tls-skip-verify `
+                --timeout 60
+              if ($LASTEXITCODE -eq 0) {
+                Write-Host "✅ Export completed successfully on attempt $i"
+                break
+              } else {
+                throw "decK exited with code $LASTEXITCODE"
+              }
+            } catch {
+              if ($i -lt $maxRetries) {
+                Write-Host "⚠️ Attempt $i failed. Retrying in 10 seconds..."
+                Start-Sleep -Seconds 10
+              } else {
+                Write-Host "❌ Export failed after $maxRetries attempts."
+                exit 1
+              }
+            }
+          }
+
+      - name: Show diff (optional)
+        shell: powershell
+        run: |
+          git --no-pager diff -- kong.yaml || Write-Host "No diff found."
 
       - name: Commit & push if changed
         shell: powershell
@@ -66,3 +93,4 @@ jobs:
             git commit -m "Auto update Kong config - $timestamp"
             git push origin "${env:main}"
             Write-Host "✅ Changes committed and pushed."
+          }
