@@ -49,7 +49,7 @@ jobs:
             --kong-addr "${KONG_ADMIN_URL%/}" \
             --headers "Kong-Admin-Token: ${KONG_TOKEN_NEW}" \
             --tls-skip-verify \
-            --timeout 60s
+            --timeout 60
 
       # -----------------------
       # Step 4: Show diff (optional)
