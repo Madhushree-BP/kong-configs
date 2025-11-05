@@ -36,7 +36,7 @@ jobs:
         shell: powershell
         env:
           KONG_ADMIN_URL: ${{ secrets.KONG_ADMIN_URL }}
-          KONG_TOKEN_NEW: ${{ secrets.KONG_TOKEN_NEW }}
+          KONG_ADMIN_TOKEN: ${{ secrets.KONG_ADMIN_TOKEN }}
         run: |
           $deckPath = "$env:RUNNER_TEMP\deck.exe"
           Write-Host "Exporting Kong configuration from $env:KONG_ADMIN_URL"
@@ -47,7 +47,7 @@ jobs:
               & $deckPath dump `
                 -o kong.yaml `
                 --kong-addr "$env:KONG_ADMIN_URL" `
-                --headers "Kong-Admin-Token: $env:KONG_TOKEN_NEW" `
+                --headers "Kong-Admin-Token: $env:KONG_ADMIN_TOKEN" `
                 --tls-skip-verify `
                 --timeout 60
               if ($LASTEXITCODE -eq 0) {
