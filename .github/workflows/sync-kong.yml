@@ -70,7 +70,14 @@ jobs:
       - name: Show diff (optional)
         shell: powershell
         run: |
-          git --no-pager diff -- kong.yaml || Write-Host "No diff found."
+          $diff = git --no-pager diff -- kong.yaml
+          if ([string]::IsNullOrWhiteSpace($diff)) {
+            Write-Host "No diff found."
+          } else {
+            Write-Host "Differences found:"
+            Write-Host $diff
+          }
+
 
       - name: Commit & push if changed
         shell: powershell
