@@ -1,58 +1,81 @@
 name: Sync Kong Config
 
-# manual + scheduled (daily at 00:00 IST)
+# Trigger manually or on schedule (daily at 00:00 IST)
 on:
-  workflow_dispatch:   # allows manual run from Actions UI
+  workflow_dispatch:        # manual trigger
   schedule:
     - cron: "30 18 * * *"   # runs daily at 00:00 IST (18:30 UTC previous day)
 
 permissions:
-  contents: write   # allow pushing changes to repo
+  contents: write           # allow pushing changes to repo
 
 env:
-  main: kong-config   # change to 'main' if you want main
+  main: kong-config         # change to 'main' if your main branch name is 'main'
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+
     steps:
+      # -----------------------
+      # Step 1: Checkout repo
+      # -----------------------
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
-          persist-credentials: true   # allow push using GITHUB_TOKEN
+          persist-credentials: true   # allow pushing with GITHUB_TOKEN
 
+      # -----------------------
+      # Step 2: Install decK
+      # -----------------------
       - name: Install decK
         run: |
-         curl -sL https://github.com/kong/deck/releases/download/v1.21.0/deck_1.21.0_linux_amd64.tar.gz -o deck.tar.gz
+          curl -sL https://github.com/kong/deck/releases/download/v1.21.0/deck_1.21.0_linux_amd64.tar.gz -o deck.tar.gz
           tar -xzf deck.tar.gz
           sudo mv deck /usr/local/bin/deck || true
           deck version || true
 
+      # -----------------------
+      # Step 3: Export Kong config
+      # -----------------------
       - name: Export Kong config
         env:
           KONG_ADMIN_URL: ${{ secrets.KONG_ADMIN_URL }}
           KONG_TOKEN_NEW: ${{ secrets.KONG_TOKEN_NEW }}
         run: |
-          # ensure we have a clean copy
-          deck dump -o kong.yaml --kong-addr "${KONG_ADMIN_URL}" --headers "Kong-Admin-Token: ${KONG_TOKEN_NEW}"
+          echo "Exporting Kong configuration from: ${KONG_ADMIN_URL}"
+          # Remove any trailing slash from KONG_ADMIN_URL, skip SSL verify, extend timeout
+          deck dump -o kong.yaml \
+            --kong-addr "${KONG_ADMIN_URL%/}" \
+            --headers "Kong-Admin-Token: ${KONG_TOKEN_NEW}" \
+            --tls-skip-verify \
+            --timeout 60s
 
+      # -----------------------
+      # Step 4: Show diff (optional)
+      # -----------------------
       - name: Show diff (optional)
         run: |
           git --no-pager diff -- kong.yaml || true
 
+      # -----------------------
+      # Step 5: Commit & push if changed
+      # -----------------------
       - name: Commit & push if changed
         run: |
           git config user.email "actions@github.com"
           git config user.name "Kong Auto Sync"
-          # switch to target branch (create it if missing)
           git fetch origin
+
+          # Switch to target branch (create if missing)
           if git ls-remote --exit-code --heads origin "${main}"; then
             git checkout "${main}"
           else
             git checkout -b "${main}"
           fi
-          # copy kong.yaml into repo root (deck already puts it here)
+
           git add kong.yaml
+
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
