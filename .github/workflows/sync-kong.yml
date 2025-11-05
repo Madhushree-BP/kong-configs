@@ -1,42 +1,43 @@
 name: Sync Kong Config (Self-hosted)
 
 on:
-  workflow_dispatch:     # manual trigger from GitHub Actions UI
+  workflow_dispatch:
   schedule:
     - cron: "30 18 * * *"   # runs daily at 00:00 IST (18:30 UTC previous day)
 
 permissions:
-  contents: write   # allow pushing changes to the repo
+  contents: write
 
 env:
-  main: kong-config   # change to 'main' if you want the main branch
+  main: kong-config
 
 jobs:
   sync:
-    runs-on: self-hosted   # run on your Windows self-hosted runner
+    runs-on: self-hosted
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
-          persist-credentials: true   # allow push using GITHUB_TOKEN
+          persist-credentials: true
 
       - name: Download and install decK (Windows)
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "Downloading decK for Windows..."
           Invoke-WebRequest -Uri "https://github.com/kong/deck/releases/download/v1.21.0/deck_1.21.0_windows_amd64.tar.gz" -OutFile "deck.tar.gz"
           tar -xzf deck.tar.gz
           Move-Item -Path .\deck.exe -Destination "C:\deck.exe" -Force
-          & C:\deck.exe version
+          & "C:\deck.exe" version
 
       - name: Export Kong configuration
-        shell: pwsh
+        shell: powershell
         env:
           KONG_ADMIN_URL: ${{ secrets.KONG_ADMIN_URL }}
           KONG_TOKEN_NEW: ${{ secrets.KONG_TOKEN_NEW }}
         run: |
           Write-Host "Exporting Kong configuration from $env:KONG_ADMIN_URL"
-          & C:\deck.exe dump `
+          & "C:\deck.exe" dump `
             -o kong.yaml `
             --kong-addr "$env:KONG_ADMIN_URL" `
             --headers "Kong-Admin-Token: $env:KONG_TOKEN_NEW" `
@@ -44,13 +45,8 @@ jobs:
             --timeout 60
           Write-Host "✅ Export completed successfully."
 
-      - name: Show diff (optional)
-        shell: pwsh
-        run: |
-          git --no-pager diff -- kong.yaml || Write-Host "No diff found"
-
       - name: Commit & push if changed
-        shell: pwsh
+        shell: powershell
         run: |
           git config user.email "actions@github.com"
           git config user.name "Kong Auto Sync"
@@ -70,4 +66,3 @@ jobs:
             git commit -m "Auto update Kong config - $timestamp"
             git push origin "${env:main}"
             Write-Host "✅ Changes committed and pushed."
-          }
