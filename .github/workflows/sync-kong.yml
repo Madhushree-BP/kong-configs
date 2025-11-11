@@ -50,6 +50,7 @@ jobs:
                 --headers "Kong-Admin-Token: $env:KONG_ADMIN_TOKEN" `
                 --tls-skip-verify `
                 --timeout 60
+                --force
               if ($LASTEXITCODE -eq 0) {
                 Write-Host "Export completed successfully on attempt $i"
                 break
