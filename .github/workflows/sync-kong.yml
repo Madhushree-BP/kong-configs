@@ -29,7 +29,7 @@ jobs:
           tar -xzf deck.tar.gz
           $deckPath = "$env:RUNNER_TEMP\deck.exe"
           Move-Item -Path .\deck.exe -Destination $deckPath -Force
-          Write-Host "✅ decK installed to $deckPath"
+          Write-Host "decK installed to $deckPath"
           & $deckPath version
 
       - name: Export Kong configuration
@@ -51,17 +51,17 @@ jobs:
                 --tls-skip-verify `
                 --timeout 60
               if ($LASTEXITCODE -eq 0) {
-                Write-Host "✅ Export completed successfully on attempt $i"
+                Write-Host "Export completed successfully on attempt $i"
                 break
               } else {
                 throw "decK exited with code $LASTEXITCODE"
               }
             } catch {
               if ($i -lt $maxRetries) {
-                Write-Host "⚠️ Attempt $i failed. Retrying in 10 seconds..."
+                Write-Host "Attempt $i failed. Retrying in 10 seconds..."
                 Start-Sleep -Seconds 10
               } else {
-                Write-Host "❌ Export failed after $maxRetries attempts."
+                Write-Host "Export failed after $maxRetries attempts."
                 exit 1
               }
             }
@@ -76,9 +76,9 @@ jobs:
 
           $diff = & git --no-pager diff -- kong.yaml 2>$null
           if ([string]::IsNullOrWhiteSpace($diff)) {
-            Write-Host "✅ No diff found."
+            Write-Host "No diff found."
           } else {
-            Write-Host "🔍 Differences detected:"
+            Write-Host "Differences detected:"
             Write-Host $diff
           }
 
@@ -103,5 +103,5 @@ jobs:
             $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
             git commit -m "Auto update Kong config - $timestamp"
             git push origin "${env:main}"
-            Write-Host "✅ Changes committed and pushed."
+            Write-Host "Changes committed and pushed."
           }
