@@ -76,20 +76,27 @@ jobs:
             }
           }
 
-      - name: Show diff (optional)
+            - name: Show diff (optional)
         shell: powershell
         run: |
           Write-Host "Checking for config changes..."
           $gitPath = "${env:ProgramFiles}\Git\bin"
           if (Test-Path $gitPath) { $env:PATH += ";$gitPath" }
 
-          $diff = & git --no-pager diff -- kong.yaml 2>$null
+          # Disable line-ending conversion warning
+          git config core.autocrlf false
+
+          # Capture diff safely and ignore exit code
+          $diff = git --no-pager diff -- kong.yaml 2>$null | Out-String
           if ([string]::IsNullOrWhiteSpace($diff)) {
             Write-Host "No diff found."
           } else {
             Write-Host "Differences detected:"
             Write-Host $diff
           }
+
+          # Always return success
+          exit 0
 
       - name: Commit & push if changed
         shell: powershell
