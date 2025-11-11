@@ -48967,6 +48967,15 @@ services:
   write_timeout: 60000
 - connect_timeout: 60000
   enabled: true
+  host: example.com
+  name: Test-git-service
+  port: 443
+  protocol: https
+  read_timeout: 60000
+  retries: 5
+  write_timeout: 60000
+- connect_timeout: 60000
+  enabled: true
   host: proxy.dev.ph.unobank.asia
   name: Token-Generation
   path: /oauth2/token
