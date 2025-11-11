@@ -39,18 +39,26 @@ jobs:
           KONG_ADMIN_TOKEN: ${{ secrets.KONG_ADMIN_TOKEN }}
         run: |
           $deckPath = "$env:RUNNER_TEMP\deck.exe"
+          $outputFile = "$env:GITHUB_WORKSPACE\kong.yaml"
+
           Write-Host "Exporting Kong configuration from $env:KONG_ADMIN_URL"
+
+          # Delete existing kong.yaml if it exists
+          if (Test-Path $outputFile) {
+            Write-Host "Existing kong.yaml found. Deleting before export..."
+            Remove-Item $outputFile -Force
+          }
 
           $maxRetries = 3
           for ($i = 1; $i -le $maxRetries; $i++) {
             try {
               & $deckPath dump `
-                -o "$env:GITHUB_WORKSPACE/kong.yaml" `
+                -o $outputFile `
                 --kong-addr "$env:KONG_ADMIN_URL" `
                 --headers "Kong-Admin-Token: $env:KONG_ADMIN_TOKEN" `
                 --tls-skip-verify `
-                --timeout 60 `
-                --force
+                --timeout 60
+
               if ($LASTEXITCODE -eq 0) {
                 Write-Host "Export completed successfully on attempt $i"
                 break
@@ -82,7 +90,6 @@ jobs:
             Write-Host "Differences detected:"
             Write-Host $diff
           }
-
 
       - name: Commit & push if changed
         shell: powershell
