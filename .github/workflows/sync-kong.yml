@@ -45,7 +45,7 @@ jobs:
           for ($i = 1; $i -le $maxRetries; $i++) {
             try {
               & $deckPath dump `
-                -o kong.yaml `
+                -o "$env:GITHUB_WORKSPACE/kong.yaml" `
                 --kong-addr "$env:KONG_ADMIN_URL" `
                 --headers "Kong-Admin-Token: $env:KONG_ADMIN_TOKEN" `
                 --tls-skip-verify `
