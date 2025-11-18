@@ -3354,7 +3354,7 @@ services:
   - config:
       access:
       - |-
-        kong.service.request.set_header("apikey","yITkePhfOUUtUTH3rzBaFUMGOhQTiZxZ")
+        kong.service.request.set_header("apikey","KDDNdxOrFcuuiIRF8GUoGm7YwsNKXjWr")
         kong.service.request.set_header("Accept","application/vnd.mambu.v2+json")
       body_filter: []
       certificate: []
@@ -48968,7 +48968,7 @@ services:
 - connect_timeout: 60000
   enabled: true
   host: example.com
-  name: Test-git-service
+  name: Test-git-service123test
   port: 443
   protocol: https
   read_timeout: 60000
