@@ -66,7 +66,20 @@ jobs:
 
           git fetch origin
 
-          # Checkout branch safely
+          # Stage changes
+          git add kong.yaml
+
+          # Exit if no changes
+          if (git diff --cached --quiet) {
+            Write-Host "No changes found."
+            exit 0
+          }
+
+          # Commit locally
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+          git commit -m "Auto update Kong config - $timestamp"
+
+          # Checkout or create branch
           if (git rev-parse --verify origin/${env:main} 2>$null) {
             git checkout ${env:main}
             git pull origin ${env:main} --rebase
@@ -74,15 +87,7 @@ jobs:
             git checkout -b ${env:main}
           }
 
-          git add kong.yaml
+          # Push safely
+          git push --force-with-lease origin ${env:main}
 
-          if (git diff --cached --quiet) {
-            Write-Host "No changes found"
-            exit 0
-          }
-
-          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
-          git commit -m "Auto update Kong config - $timestamp"
-
-          git push origin ${env:main}
 
