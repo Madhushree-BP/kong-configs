@@ -64,11 +64,17 @@ jobs:
           git config user.email "actions@github.com"
           git config user.name "Kong Auto Sync"
           git fetch origin
-          if (git ls-remote --exit-code --heads origin "${env:main}") { git checkout "${env:main}" }
-          else { git checkout -b "${env:main}" }
+          if (git ls-remote --exit-code --heads origin "${env:main}") {
+            git checkout "${env:main}"
+          } else {
+            git checkout -b "${env:main}"
+          }
           git add kong.yaml
-          if (git diff --cached --quiet) { Write-Host "No changes" }
-          else {
-            git commit -m "Auto update"
+          if (git diff --cached --quiet) {
+            Write-Host "No changes to commit."
+          } else {
+            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+            git commit -m "Auto update Kong config - $timestamp"
             git push origin "${env:main}"
+            Write-Host "Changes committed and pushed."
           }
