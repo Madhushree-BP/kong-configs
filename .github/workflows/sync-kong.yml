@@ -58,23 +58,31 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($diff)) { Write-Host "No diff found." }
           else { Write-Host $diff }
 
-      - name: Commit & push if changed
+      - name: Commit & Push If Changed (safe rebase)
         shell: powershell
         run: |
           git config user.email "actions@github.com"
           git config user.name "Kong Auto Sync"
+
           git fetch origin
-          if (git ls-remote --exit-code --heads origin "${env:main}") {
-            git checkout "${env:main}"
+
+          # Checkout branch safely
+          if (git rev-parse --verify origin/${env:main} 2>$null) {
+            git checkout ${env:main}
+            git pull origin ${env:main} --rebase
           } else {
-            git checkout -b "${env:main}"
+            git checkout -b ${env:main}
           }
+
           git add kong.yaml
+
           if (git diff --cached --quiet) {
-            Write-Host "No changes to commit."
-          } else {
-            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
-            git commit -m "Auto update Kong config - $timestamp"
-            git push origin "${env:main}"
-            Write-Host "Changes committed and pushed."
+            Write-Host "No changes found"
+            exit 0
           }
+
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+          git commit -m "Auto update Kong config - $timestamp"
+
+          git push origin ${env:main}
+
