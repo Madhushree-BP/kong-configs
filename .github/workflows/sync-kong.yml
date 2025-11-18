@@ -1,19 +1,17 @@
-name: Sync Kong Config (Self-hosted Windows)
-
 on:
-  workflow_dispatch:     # allows manual trigger from Actions UI
+  workflow_dispatch:
   schedule:
-    - cron: "30 18 * * *"   # runs daily at 00:00 IST (18:30 UTC previous day)
+    - cron: "30 18 * * *"
 
 permissions:
-  contents: write   # allow pushing changes to the repo
+  contents: write
 
 env:
-  main: kong-config   # change to 'main' if you want to push to main branch
+  main: kong-config
 
 jobs:
   sync:
-    runs-on: self-hosted   # runs on your Windows self-hosted runner
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repo
@@ -28,8 +26,7 @@ jobs:
           Invoke-WebRequest -Uri "https://github.com/kong/deck/releases/download/v1.21.0/deck_1.21.0_windows_amd64.tar.gz" -OutFile "deck.tar.gz"
           tar -xzf deck.tar.gz
           $deckPath = "$env:RUNNER_TEMP\deck.exe"
-          Move-Item -Path .\deck.exe -Destination $deckPath -Force
-          Write-Host "decK installed to $deckPath"
+          Move-Item .\deck.exe $deckPath -Force
           & $deckPath version
 
       - name: Export Kong configuration
@@ -40,83 +37,38 @@ jobs:
         run: |
           $deckPath = "$env:RUNNER_TEMP\deck.exe"
           $outputFile = "$env:GITHUB_WORKSPACE\kong.yaml"
-
-          Write-Host "Exporting Kong configuration from $env:KONG_ADMIN_URL"
-
-          # Delete existing kong.yaml if it exists
-          if (Test-Path $outputFile) {
-            Write-Host "Existing kong.yaml found. Deleting before export..."
-            Remove-Item $outputFile -Force
-          }
-
+          if (Test-Path $outputFile) { Remove-Item $outputFile -Force }
           $maxRetries = 3
           for ($i = 1; $i -le $maxRetries; $i++) {
             try {
-              & $deckPath dump `
-                -o $outputFile `
-                --kong-addr "$env:KONG_ADMIN_URL" `
-                --headers "Kong-Admin-Token: $env:KONG_ADMIN_TOKEN" `
-                --tls-skip-verify `
-                --timeout 60
-
-              if ($LASTEXITCODE -eq 0) {
-                Write-Host "Export completed successfully on attempt $i"
-                break
-              } else {
-                throw "decK exited with code $LASTEXITCODE"
-              }
+              & $deckPath dump -o $outputFile --kong-addr "$env:KONG_ADMIN_URL" --headers "Kong-Admin-Token: $env:KONG_ADMIN_TOKEN" --tls-skip-verify --timeout 60
+              if ($LASTEXITCODE -eq 0) { break }
+              else { throw }
             } catch {
-              if ($i -lt $maxRetries) {
-                Write-Host "Attempt $i failed. Retrying in 10 seconds..."
-                Start-Sleep -Seconds 10
-              } else {
-                Write-Host "Export failed after $maxRetries attempts."
-                exit 1
-              }
+              if ($i -lt $maxRetries) { Start-Sleep 10 }
+              else { exit 1 }
             }
           }
 
-            - name: Show diff (optional)
+      - name: Show diff (optional)
         shell: powershell
         run: |
-          Write-Host "Checking for config changes..."
-          $gitPath = "${env:ProgramFiles}\Git\bin"
-          if (Test-Path $gitPath) { $env:PATH += ";$gitPath" }
-
-          # Disable line-ending conversion warning
           git config core.autocrlf false
-
-          # Capture diff safely and ignore exit code
           $diff = git --no-pager diff -- kong.yaml 2>$null | Out-String
-          if ([string]::IsNullOrWhiteSpace($diff)) {
-            Write-Host "No diff found."
-          } else {
-            Write-Host "Differences detected:"
-            Write-Host $diff
-          }
-
-          # Always return success
-          exit 0
+          if ([string]::IsNullOrWhiteSpace($diff)) { Write-Host "No diff found." }
+          else { Write-Host $diff }
 
       - name: Commit & push if changed
         shell: powershell
         run: |
           git config user.email "actions@github.com"
           git config user.name "Kong Auto Sync"
-
           git fetch origin
-          if (git ls-remote --exit-code --heads origin "${env:main}") {
-            git checkout "${env:main}"
-          } else {
-            git checkout -b "${env:main}"
-          }
-
+          if (git ls-remote --exit-code --heads origin "${env:main}") { git checkout "${env:main}" }
+          else { git checkout -b "${env:main}" }
           git add kong.yaml
-          if (git diff --cached --quiet) {
-            Write-Host "No changes to commit."
-          } else {
-            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
-            git commit -m "Auto update Kong config - $timestamp"
+          if (git diff --cached --quiet) { Write-Host "No changes" }
+          else {
+            git commit -m "Auto update"
             git push origin "${env:main}"
-            Write-Host "Changes committed and pushed."
           }
